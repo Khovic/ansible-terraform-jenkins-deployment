@@ -1,0 +1,3 @@
+linux_user: good_user
+ansible_python_interpreter: /usr/bin/python3
+target_os: 'Amazon'

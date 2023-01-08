@@ -8,6 +8,8 @@ variable subnet_cidr_block {}
 variable env_prefix {}
 variable my_ip {}
 variable instance_type {}
+variable ssh_private_key {}
+variable ssh_user {}
 
 resource "aws_vpc" "myapp-vpc" {
     cidr_block = var.vpc_cidr_block
@@ -136,6 +138,11 @@ resource "aws_instance" "myapp-server" {
     tags = {
         Name = "${var.env_prefix}-server"
     }
+
+    provisioner "local-exec" {
+    working_dir = "../Ansible"
+    command = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.ssh_private_key} --user ${var.ssh_user} deploy-jenkins.yaml"
+  }
 }
 
 

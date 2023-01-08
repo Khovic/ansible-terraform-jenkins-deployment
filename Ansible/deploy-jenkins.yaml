@@ -1,0 +1,115 @@
+---
+- name: wait for SSH
+  hosts: all
+  gather_facts: False
+  vars_files:
+    - vars_file
+  tasks:
+    - name: wait for ssh
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 100
+        search_regex: OpenSSH
+        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
+      vars:
+        ansible_connection: local
+
+- name: Install docker
+  hosts: all
+  vars_files:
+    - vars_file
+  tasks:
+    - name: update apt and install docker.io
+      when: target_os == 'Ubuntu'
+      ansible.builtin.apt:
+         name:
+          - docker.io
+          - python3-pip
+          - python3
+          - docker-compose
+         update_cache: yes
+         cache_valid_time: 3600
+      become_user: root
+      become: true
+
+    - name: update yum and install docker.io
+      when: target_os == 'Amazon'
+      vars:
+          - ansible_python_interpreter: /usr/bin/python
+      ansible.builtin.yum:
+         name:
+          - docker
+          - pip
+         update_cache: yes
+         state: present
+      become_user: root
+      become: true
+
+    - name: install docker-compose
+      when: target_os == 'Amazon'
+      ansible.builtin.get_url:
+          url: https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-{{lookup('pipe', 'uname -m')}}
+          dest: /bin/docker-compose
+          mode: '0777'
+      become_user: root
+      become: true
+    
+    - name: pip install docker
+      ansible.builtin.pip:
+        name: 
+         - docker
+         - ansible
+        executable: pip3
+      become: true
+    
+    - name: create user
+      when: target_os == 'Ubuntu'
+      ansible.builtin.user:
+        name: "{{linux_user}}"
+        groups: admin, docker
+      become_user: root
+      become: true
+
+    - name: create user amazon
+      when: target_os == 'Amazon'
+      ansible.builtin.user:
+        name: "{{linux_user}}"
+        groups: adm, docker
+      become_user: root
+      become: true
+
+    - name: start docker daemon
+      service:
+         name: docker
+         state: started
+         enabled: true
+      become: true
+
+    - name: start jenkins container with docker socket
+      docker_container:
+        name: jenkins
+        image: jenkins/jenkins:lts
+        state: started
+        volumes:
+                - "/var/run/docker.sock:/var/run/docker.sock"
+                - "/usr/local/bin/docker:/usr/bin/docker"
+                - "jenkins_home:/var/jenkins_home"
+        ports:
+                - "8080:8080"
+                - "50000:5000"
+      become_user: root
+      become: true 
+
+    - name: wait for jenkins container
+      ansible.builtin.wait_for:
+        timeout: 120
+      delegate_to: localhost 
+
+    - name: get initiladminpassword
+      shell: sudo docker exec -it jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+      register: jenkins_admin_password
+    
+    - name: print jenkins password 
+      ansible.builtin.debug:
+          var: jenkins_admin_password.stdout_lines
