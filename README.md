@@ -1,3 +1,3 @@
 # ansible-terraform-jenkins-deployment
 
-Here, using "terraform apply" we can automatically provision an ec2-instance and deploy jenkins on it via ansible. 
+Here, we created terraform script that provisions an EC2-Instace and deploys a jenkins docker container on it via ansible.
