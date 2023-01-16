@@ -103,7 +103,7 @@
 
     - name: wait for jenkins container
       ansible.builtin.wait_for:
-        timeout: 100
+        timeout: 1
       delegate_to: localhost 
     
     - name: docker sock permissions
@@ -121,7 +121,21 @@
       - "rm /home/terraform.zip"
       become: true
 
+    - name: install aws-cli in jenkins container
+      community.docker.docker_container_exec:
+        container: jenkins
+        command: /bin/bash -c "{{item}}"
+        user: root
+      with_items:
+      - "curl -o /home/awscliv2.zip https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+      - "unzip -o /home/awscliv2.zip"
+      - "./aws/install"
+      - "rm /home/awscliv2.zip"
+      become: true
+    
+
     - name: get initiladminpassword
+      ignore_errors: true
       shell: sudo docker exec -it jenkins cat /var/jenkins_home/secrets/initialAdminPassword
       register: jenkins_admin_password
     
