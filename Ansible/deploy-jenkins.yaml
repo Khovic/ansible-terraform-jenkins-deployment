@@ -132,7 +132,16 @@
       - "./aws/install"
       - "rm /home/awscliv2.zip"
       become: true
-    
+
+    - name: install gettext for envsubst in jenkins container
+      community.docker.docker_container_exec:
+        container: jenkins
+        command: /bin/bash -c "{{item}}"
+        user: root
+      with_items:
+      - "apt-get update"
+      - "apt-get install gettext-base -y"
+      become: true
 
     - name: get initiladminpassword
       ignore_errors: true
