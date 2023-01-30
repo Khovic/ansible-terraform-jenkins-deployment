@@ -1,0 +1,11 @@
+#this will update yum packages on our dynamic inventory
+
+- name: update yum and install docker.io
+      when: target_os == 'Amazon'
+      vars:
+          - ansible_python_interpreter: /usr/bin/python
+      ansible.builtin.yum:
+         update_cache: yes
+         state: present
+      become_user: root
+      become: true
